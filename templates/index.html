@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Cattle Disease Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">
+                <i class="fas fa-microscope"></i>
+                AI-Powered Cattle Disease Detection
+            </h1>
+            <p class="subtitle">Upload an image of cattle to detect potential diseases using advanced AI technology</p>
+            <div class="header-actions">
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <h3>Choose or Drag & Drop Image</h3>
+                    <p>Supported formats: JPG, PNG, GIF, BMP, TIFF</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    <button class="select-btn" onclick="document.getElementById('imageInput').click()">
+                        <i class="fas fa-folder-open"></i> Select Image
+                    </button>
+                </div>
+
+                <div class="upload-guidelines" id="uploadGuidelines">
+                    <h4><i class="fas fa-camera-retro"></i> Image upload guidelines</h4>
+                    <div class="guideline-cards">
+                        <div class="guideline-card">
+                            <h5>Lumpy Skin Disease</h5>
+                            <p>Upload a clear side or full-body image of the cow to show visible skin lumps, swellings, or lesions on the animal’s body.</p>
+                        </div>
+
+                        <div class="guideline-card">
+                            <h5>Foot and Mouth Disease (FMD)</h5>
+                            <p>Upload a close-up photo clearly showing the cow’s mouth, hooves, and lower legs to capture any blisters, sores, or lesions.</p>
+                        </div>
+
+                        <div class="guideline-card">
+                            <h5>Mastitis</h5>
+                            <p>Upload a close-up image of the cow’s udder from the side or below, ensuring the teats and any signs of swelling, redness, or discharge are visible.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="image-preview" id="imagePreview" style="display: none;">
+                    <img id="previewImg" alt="Preview">
+                    <div class="image-info">
+                        <p id="fileName"></p>
+                        <button class="change-btn" onclick="document.getElementById('imageInput').click()">
+                            <i class="fas fa-edit"></i> Change Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-section">
+                <button class="predict-btn" id="predictBtn" disabled>
+                    <i class="fas fa-search"></i>
+                    <span>Analyze Image</span>
+                </button>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing image... Please wait</p>
+            </div>
+
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-header">
+                    <h3><i class="fas fa-clipboard-check"></i> Analysis Results</h3>
+                </div>
+
+                <div class="result-content">
+                    <div class="prediction-main">
+                        <div class="prediction-label">
+                            <span class="label-text">Detected Condition:</span>
+                            <span class="prediction-value" id="predictionResult"></span>
+                        </div>
+                        <div class="confidence-bar">
+                            <span class="confidence-text">Confidence: <span id="confidenceValue"></span>%</span>
+                            <div class="confidence-progress">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="disease-info" id="diseaseInfo">
+                        <div class="info-item">
+                            <h4><i class="fas fa-info-circle"></i> Description</h4>
+                            <p id="diseaseDescription"></p>
+                        </div>
+
+                        <div class="info-item">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Severity Level</h4>
+                            <span class="severity-badge" id="severityLevel"></span>
+                        </div>
+
+                        <div class="info-item">
+                            <h4><i class="fas fa-clipboard-list"></i> Recommendations</h4>
+                            <p id="diseaseRecommendation"></p>
+                        </div>
+                    </div>
+
+                    <div class="all-predictions">
+                        <h4><i class="fas fa-chart-bar"></i> Detailed Predictions</h4>
+                        <div id="allPredictionsContent"></div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button class="analyze-another-btn" onclick="resetForm()">
+                        <i class="fas fa-redo"></i> Analyze Another Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-content">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Error</h3>
+                    <p id="errorMessage"></p>
+                    <button class="retry-btn" onclick="resetForm()">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 AI-Powered Cattle Disease Detection System</p>
+        </footer>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const fileName = document.getElementById('fileName');
+        const predictBtn = document.getElementById('predictBtn');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const errorSection = document.getElementById('errorSection');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // File input change
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/tiff'];
+            if (!allowedTypes.includes(file.type)) {
+                showError('Please select a valid image file (JPG, PNG, GIF, BMP, TIFF)');
+                return;
+            }
+
+            // Validate file size (16MB max)
+            if (file.size > 16 * 1024 * 1024) {
+                showError('File size must be less than 16MB');
+                return;
+            }
+
+            // Display preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                fileName.textContent = file.name;
+
+                uploadArea.style.display = 'none';
+                imagePreview.style.display = 'block';
+                predictBtn.disabled = false;
+
+                // Hide previous results
+                hideAllSections();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Predict button click
+        predictBtn.addEventListener('click', () => {
+            const file = imageInput.files[0];
+            if (!file) {
+                showError('Please select an image first');
+                return;
+            }
+
+            // Show loading
+            hideAllSections();
+            loading.style.display = 'block';
+            predictBtn.disabled = true;
+
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Make prediction request
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+
+                if (data.success) {
+                    showResults(data);
+                } else {
+                    showError(data.error || 'An error occurred during prediction');
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+                showError('Network error: ' + error.message);
+            });
+        });
+
+        function showResults(data) {
+            // Update main prediction
+            const predictionResult = document.getElementById('predictionResult');
+            predictionResult.textContent = data.prediction;
+            predictionResult.style.color = data.color;
+
+            // Update confidence
+            const confidenceValue = document.getElementById('confidenceValue');
+            const confidenceFill = document.getElementById('confidenceFill');
+            confidenceValue.textContent = data.confidence;
+            confidenceFill.style.width = data.confidence + '%';
+            confidenceFill.style.backgroundColor = getConfidenceColor(data.confidence);
+
+            // Update disease info
+            document.getElementById('diseaseDescription').textContent = data.description;
+            document.getElementById('diseaseRecommendation').textContent = data.recommendation;
+
+            const severityLevel = document.getElementById('severityLevel');
+            severityLevel.textContent = data.severity;
+            severityLevel.className = 'severity-badge ' + getSeverityClass(data.severity);
+
+            // Update all predictions
+            const allPredictionsContent = document.getElementById('allPredictionsContent');
+            allPredictionsContent.innerHTML = '';
+
+            for (const [className, confidence] of Object.entries(data.all_predictions)) {
+                const predictionItem = document.createElement('div');
+                predictionItem.className = 'prediction-item';
+
+                const displayName = formatClassName(className);
+                predictionItem.innerHTML = `
+                    <span class="prediction-name">${displayName}</span>
+                    <div class="prediction-bar">
+                        <div class="prediction-fill" style="width: ${confidence}%; background-color: ${getConfidenceColor(confidence)};"></div>
+                        <span class="prediction-percent">${confidence}%</span>
+                    </div>
+                `;
+                allPredictionsContent.appendChild(predictionItem);
+            }
+
+            resultSection.style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            errorSection.style.display = 'block';
+        }
+
+        function hideAllSections() {
+            resultSection.style.display = 'none';
+            errorSection.style.display = 'none';
+            loading.style.display = 'none';
+        }
+
+        function resetForm() {
+            imageInput.value = '';
+            uploadArea.style.display = 'block';
+            imagePreview.style.display = 'none';
+            predictBtn.disabled = true;
+            hideAllSections();
+        }
+
+        function getConfidenceColor(confidence) {
+            if (confidence >= 80) return '#28a745';
+            if (confidence >= 60) return '#ffc107';
+            return '#dc3545';
+        }
+
+        function getSeverityClass(severity) {
+            switch (severity.toLowerCase()) {
+                case 'none': return 'severity-none';
+                case 'moderate': return 'severity-moderate';
+                case 'high': return 'severity-high';
+                case 'critical': return 'severity-critical';
+                default: return 'severity-unknown';
+            }
+        }
+
+        function formatClassName(className) {
+            switch (className) {
+                case 'foot_mouth': return 'Foot and Mouth Disease';
+                case 'lumpy_skin': return 'Lumpy Skin Disease';
+                default: return className.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+        }
+
+        // Theme (dark / light) toggle
+        (function() {
+            const themeToggle = document.getElementById('themeToggle');
+            if (!themeToggle) return;
+
+            function updateIcon() {
+                if (document.body.classList.contains('dark')) {
+                    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                    themeToggle.title = 'Switch to light mode';
+                } else {
+                    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                    themeToggle.title = 'Switch to dark mode';
+                }
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.body.classList.toggle('dark');
+                try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch (e) {}
+                updateIcon();
+            });
+
+            // Initialize from saved preference or system preference
+            try {
+                const saved = localStorage.getItem('theme');
+                const defaultTheme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                if (defaultTheme === 'dark') document.body.classList.add('dark');
+            } catch (e) {}
+
+            updateIcon();
+        })();
+    </script>
+</body>
+</html>

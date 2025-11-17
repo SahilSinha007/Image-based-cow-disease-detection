@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+/.venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data / runtime
+uploads/
+*.sqlite3
+
+# Models and large binaries
+*.h5
+*.hdf5
+*.ckpt
+*.pth
+*.pt
+
+# Logs
+*.log
+
+# Notebook checkpoints
+.ipynb_checkpoints
+
+# Environment files
+.env
+env.*
