@@ -16,7 +16,7 @@ This repository implements a **production-ready demonstration pipeline** for det
 
 ## 🎯 Key Features
 
-- ✅ **Transfer Learning**: Pre-trained backbone (MobileNetV2/EfficientNetB0) fine-tuned for cattle disease classification
+- ✅ **Transfer Learning**: Pre-trained backbone (MobileNetV2/VGG16) fine-tuned for cattle disease classification
 - ✅ **Smart Image Vetting**: ImageNet-based heuristics to reject non-cow images and reduce false positives
 - ✅ **REST API**: Flask server with `/predict` endpoint for image classification
 - ✅ **Web UI**: Drag-and-drop interface with real-time preview and results visualization
