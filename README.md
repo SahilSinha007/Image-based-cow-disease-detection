@@ -30,321 +30,212 @@ Prerequisites
 
 Quick start (local)
 -------------------
-PowerShell commands (run inside `C:\Users\hp\Desktop\Cattle_Disease_Project_modified`):
+***Cattle Disease Detection — Detailed Project Overview***
 
-1) Create & activate a virtual environment:
+**Project Summary**
+
+- **Purpose:** Provide an end-to-end demo that classifies cattle images into disease categories (lumpy skin, mastitis, foot-and-mouth disease, and healthy) using a Keras/TensorFlow model served by a Flask backend and a lightweight web UI.
+- **Key Components:**
+  - **Flask server:** `app_modified.py` (serves model inference API, image vetting heuristics, and static pages).
+  - **Frontend:** `templates/index.html` and `static/css/style.css` (upload UI, image preview, dark-mode toggle, guidance cards).
+  - **Model weights:** `cattle_disease_model_simple.h5` (Keras saved model file) and `class_indices.json` (mapping from model output index to class labels).
+  - **Dataset (local):** `dataset/` (training images grouped by class). NOTE: large dataset files may increase repo size — see "Repository size" below.
+
+**Why this project exists**
+
+- To demonstrate a practical image-classification pipeline for an applied veterinary use-case. It shows how to:
+  - Collect and structure image data for transfer learning.
+  - Train a Keras model for multi-class classification of disease vs healthy.
+  - Deploy the model behind a Flask API with added heuristics to reduce false positives from non-cow images.
+  - Provide a simple browser UI to upload images and obtain predictions.
+
+**Repository structure (important files)**
+
+- `app_modified.py`: Flask application with `/` (UI), `/predict` (POST image inference), and other helper endpoints. Contains ImageNet-based vetting heuristics to block non-cow inputs.
+- `templates/index.html`: Main web page — upload controls, preview, image guidance cards, dark-mode toggle.
+- `static/css/style.css`: CSS styles including light/dark mode and guideline card styles.
+- `cattle_disease_model_simple.h5`: Trained Keras model file used for prediction.
+- `class_indices.json`: JSON mapping of model class indices to human-readable labels.
+- `dataset/`: Example training images organized in subfolders per class (e.g., `lumpy_skin/`, `mastitis/`, `foot_mouth/`, `healthy/`).
+- `requirements.txt`: Python dependencies used for local environment.
+
+**Getting started**
+
+**Prerequisites**
+
+- Python 3.8+ (3.9 or 3.10 recommended for TensorFlow compatibility)
+- A virtual environment (recommended) and pip
+
+**Quick install**
+
+1. Create and activate a virtual environment:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-2) Install dependencies:
+2. Install dependencies:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-3) Run the app (development):
+3. Run the Flask app (development mode):
 
 ```powershell
-python .\app_modified.py
+python app_modified.py
 ```
 
-4) Open the UI in your browser: http://127.0.0.1:5000
+4. Open the UI at `http://127.0.0.1:5000/` in your browser.
 
-Project structure
------------------
-Key files and directories:
+**How to use the web UI**
 
-- `app_modified.py` — main Flask server with added cow-detection safeguards (this file is the one used for local testing).
-- `app_robust.py` — alternate app file (left unchanged per project history).
-- `templates/index.html` — HTML UI (image upload, progress, results, guidelines, dark mode toggle).
-- `static/css/style.css` — CSS and dark mode styles.
-- `cattle_disease_model_simple.h5` — expected trained model (not committed by default due to size).
-- `class_indices.json` — mapping between class names and model indices.
-- `uploads/` — runtime folder where uploaded images are stored (ignored by git).
-- `.gitignore` — ignores virtualenvs, model files, uploads, logs, etc.
+- Click or drag an image onto the upload area.
+- The UI will show a preview and you can press **Analyze** to send the image to the backend.
+- The UI includes an **Image upload guidelines** panel describing recommended capture angles and close-ups for each disease:
+  - **Lumpy Skin:** full-body side view showing raised nodules on skin.
+  - **Foot-and-Mouth Disease (FMD):** close-up of mouth, tongue, or foot lesions; include interior mouth shots if possible.
+  - **Mastitis:** clear close-up of the udder/teats; non-blurry and well-lit.
+- The UI supports a light background and a persisted dark-mode toggle stored in `localStorage`.
 
-API endpoints & examples
-------------------------
-The Flask app exposes the following useful endpoints:
+**Screenshots**
 
-- `GET /` — returns the web UI (browser)
-- `POST /predict` — accepts multipart file upload, returns JSON prediction and metadata
-- `GET /health` — health/status JSON for quick checks
-- `GET /model-stats` — detailed model metrics JSON
+Below are placeholder screenshots showing the web UI and example results. Add your screenshots to a `screenshots/` folder at the project root and update filenames as needed.
 
-Example: Predict (PowerShell curl)
+![UI - Upload area](screenshots/screenshot-upload.png)
 
-```powershell
-$file = 'C:\path\to\your\image.jpg'
-curl -X POST -F "file=@$file" http://127.0.0.1:5000/predict
-```
+![UI - Prediction result](screenshots/screenshot-result.png)
 
-Expected JSON (success):
+Tip: Commit small, optimized JPG/PNG screenshots (under 500 KB) or host them externally if you want to keep the repository size small.
+
+**API and backend behavior**
+
+**Endpoints**
+
+- `GET /` — Serves the HTML UI (`templates/index.html`).
+- `POST /predict` — Accepts a multipart form with `file` and returns JSON prediction or a rejection message.
+
+**Inference workflow (what happens on `/predict`)**
+
+1. Server reads uploaded image and applies preprocessing expected by the disease model (resize, scaling, channel order).
+2. Server runs the disease classifier (Keras model) to produce softmax scores for each class.
+3. Server optionally runs an ImageNet pretrained MobileNetV2 (lazy-loaded fallback) on a copy of the image to get coarse semantic labels. This is used as a heuristic filter to detect obvious non-cow images (documents, screenshots, artifacts) and to boost confidence if the image contains bovine-related labels.
+4. A combined heuristic decides whether to accept the image for final classification:
+   - If the disease-model top class probability is above a configurable threshold (default ~0.35), accept and return prediction.
+   - If ImageNet strongly indicates the image is a document/screenshot or otherwise non-natural, the backend rejects to avoid false positive disease predictions on non-cow images.
+   - If ImageNet shows bovine-related labels (e.g., "ox", "cow", "bull") even at modest probability, it can help accept close-up images that lack broad context.
+
+**Returned JSON**
+
+Success (HTTP 200):
 
 ```json
 {
-  "success": true,
-  "prediction": "Mastitis",
-  "confidence": 66.9,
-  "class": "mastitis",
-  "description": "Mastitis detected - inflammation of the mammary gland.",
-  "all_predictions": {"mastitis": 66.9, "lumpy_skin": 10.2, "healthy": 20.0, "foot_mouth": 2.9},
-  "image_info": {"original_size": [1280, 960], "processed_shape": [1,224,224,3]},
-  "timestamp": "2025-11-17T..."
+  "status": "success",
+  "predictions": [
+    {"label": "lumpy_skin", "probability": 0.823},
+    {"label": "mastitis", "probability": 0.105},
+    {"label": "healthy", "probability": 0.072}
+  ],
+  "accepted": true
 }
 ```
 
-If the server rejects the image (e.g., non-cow document or a screenshot), the response will be a 400 JSON with an explanatory message, for example:
+Rejection (HTTP 400):
 
 ```json
-{ "error": "Uploaded image does not appear to contain a cow or relevant cow body part. Please upload a clear image of a cow (full body or close-up of mouth, hoof, udder).", "success": false }
+{
+  "status": "rejected",
+  "message": "Image appears to be a document (envelope) — please upload a cow image.",
+  "accepted": false
+}
 ```
 
-Cow-detection and false-positive mitigation (detailed)
------------------------------------------------------
-This project includes defensive logic to reduce incorrect disease predictions for images that are not cows (documents, screenshots, game images, etc.). The checks are implemented in `app_modified.py` in function `is_likely_cow(...)` and follow this strategy:
+**Heuristics and tuning guide**
 
-1. ImageNet (MobileNetV2) fallback (lazy-loaded): when available the app runs the uploaded image through a MobileNetV2 pretrained on ImageNet and decodes the top labels.
-   - If ImageNet suggests bovine-related labels (e.g., `cow`, `ox`, `bull`, `bison`) with modest probability (default 5%), the image is accepted as containing a cow.
-   - If ImageNet suggests document/screen/game/statue/man-made labels with higher probability (default 15%) or the top label is a non-natural object with probability >= 10%, the image is rejected.
+The project uses a few conservative heuristics to avoid predicting diseases on non-cow images. These are implemented in `app_modified.py` and controlled by constants near the top of the file. Typical values used during development:
 
-2. Disease-model fallback: if ImageNet is unavailable or inconclusive, the disease model's confidence is used as a fallback. A disease prediction (mastitis, lumpy_skin, foot_mouth) equal to or above a configured threshold (default 35%) will be accepted for close-up images.
+- `DISEASE_CONF_THRESHOLD = 0.35` — Disease model confidence above which predictions are accepted.
+- `bovine_prob_threshold ≈ 0.05` — If ImageNet assigns >5% mass to bovine-related labels, this helps accept a close-up.
+- `non_natural_prob_threshold ≈ 0.15` — If ImageNet assigns >15% to non-natural/document labels (envelope, binder, monitor, etc.), reject.
 
-3. Tunable thresholds and behavior:
-   - `DISEASE_CONF_THRESHOLD` (default 0.35) — disease model confidence cutoff used as a fallback.
-   - `bovine_prob_threshold` (default 0.05) — ImageNet probability to accept bovine label.
-   - `non_natural_prob_threshold` (default 0.15) — ImageNet probability to reject non-natural labels.
+**Important practical notes:**
 
-Why this exists: the disease model is trained to detect visual patterns on cow skin, udder, hooves and mouth. However, on completely unrelated images (papers, screenshots, game scenes), the model can produce confident but spurious outputs. The ImageNet-based vetting reduces such false positives by rejecting obvious non-animal images.
+- These heuristics are conservative; they reduce obvious false positives but can still fail on ambiguous images. If you find legitimate cow close-ups being rejected, increase the `bovine_prob_threshold` tolerance or lower the `non_natural_prob_threshold` temporarily while logging the ImageNet labels to determine better keywords.
+- Long-term robust fix: train a dedicated binary classifier (cow vs not-cow) using transfer learning and a curated dataset of both cow close-ups and likely confounders (documents, screens, pets, landscapes). This is recommended for production.
 
-Notes and limitations
----------------------
-- This mechanism is a heuristic: ImageNet labels can be noisy and may not always correctly indicate 'cow' vs 'not cow'.
-- Offline or air-gapped environments without ImageNet weights will fall back to disease-model confidence behavior; that is less reliable for non-cow images.
-- The long-term robust solution is to train a small binary classifier (cow vs not-cow) using transfer learning — see "Future improvements" below.
+**Model training notes**
 
-Configuration and environment variables
---------------------------------------
-The code does not currently require environment variables, but you may prefer to expose some config via env vars in production, for example:
+- The repository includes a training script `train_simple_robust.py` used to prepare the `cattle_disease_model_simple.h5` model. Key steps typically are:
+  - Organize images in `dataset/<class_name>/` folders.
+  - Use data augmentation (rotation/flip/brightness) to improve generalization for different lighting and angles.
+  - Use a pre-trained backbone (e.g., MobileNetV2 / EfficientNet) and fine-tune on the task.
+- If you want to retrain:
+  1. Ensure your `dataset/` has sufficiently diverse images for each class.
+  2. Update hyperparameters in `train_simple_robust.py` as needed.
+  3. Train on a GPU for reasonable speed.
 
-- `APP_MODEL_FILE` — path to the model file (default `cattle_disease_model_simple.h5`)
-- `DISABLE_IMAGENET_CHECK` — set to `1` to disable ImageNet vetting (useful in offline contexts)
+**Repository size & Git guidance**
 
-You can modify `app_modified.py` to read these from `os.environ` before starting the model.
+- The `dataset/` folder contains many images and increases repository size. For a clean public repo you may want to:
+  - Remove dataset files from git history using `git filter-repo` or the BFG Repo-Cleaner.
+  - Add datasets to `.gitignore` and host them externally (OSF, Zenodo, Google Drive) with download scripts.
+  - Use Git LFS for large binary files if you need to keep some images tracked.
 
-Development notes (how the UI works)
------------------------------------
-- The UI in `templates/index.html` supports drag/drop and file selection.
-- After upload, the UI shows a preview and an "Analyze Image" button. Results are displayed with confidence bars and descriptive text.
-- I added an "Image upload guidelines" section that instructs how to take photos for each disease:
-  - Lumpy Skin Disease: full-body side view to show skin lumps
-  - Foot and Mouth Disease: close-up of mouth and lower legs/hooves
-  - Mastitis: close-up of the udder from the side/below
-- A dark-mode toggle stores the preference in `localStorage`.
-
-Security and privacy
---------------------
-- Uploaded images are stored in `uploads/` folder by default. That folder is ignored in git. Consider cleaning it periodically.
-- Do not commit images, model files, or any private data to the repository. Use cloud storage or GitHub Releases for large models.
-
-How to publish to GitHub
-------------------------
-1) Create a new repository on GitHub (via website or `gh` CLI).
-
-2) From your project folder:
+Example commands to remove the dataset from tracking (keep locally):
 
 ```powershell
-git init
-git add .
-git commit -m "Initial commit - cattle disease detection"
-git remote add origin https://github.com/<your-username>/<repo>.git
-git branch -M main
-git push -u origin main
+git rm -r --cached dataset
+echo "dataset/" >> .gitignore
+git add .gitignore
+git commit -m "Remove dataset from repo and add to .gitignore"
+git push origin main
 ```
 
-If you have the GitHub CLI installed you can create and push in one step:
+**Development, tests, and CI**
+
+- This project doesn't include an automated test suite yet. For local testing:
+  - Start the server: `python app_modified.py` and test uploads via the UI.
+  - Use `curl` or a small script to POST images to `/predict` for bulk checks.
+
+Example curl request
 
 ```powershell
-gh repo create <repo-name> --public --source=. --remote=origin --push
+curl -X POST -F "file=@path\to\image.jpg" http://127.0.0.1:5000/predict
 ```
 
-CI/CD (optional)
------------------
-If you want a continuous integration workflow, add a GitHub Actions YAML file to `.github/workflows/` to run linting/tests. A simple workflow might run `pip install -r requirements.txt` and run a lint or unit test script.
+**Troubleshooting**
 
-Future improvements and advanced ideas
--------------------------------------
-- Train a binary "cow vs non-cow" classifier with transfer learning (MobileNetV2/EfficientNet) to remove reliance on ImageNet heuristics.
-- Add an option in the UI to "Proceed anyway" when an image is rejected by the vetting logic (useful for advanced users).
-- Move model files to cloud storage and download them on first-run, or use Git LFS for versioning.
-- Add end-to-end tests, and a GitHub Action to run them on PRs.
+- TensorFlow errors on import: ensure installed TensorFlow is compatible with your Python version. On Windows, TensorFlow 2.10 or later usually requires Python 3.8–3.10.
+- Model not found: confirm `cattle_disease_model_simple.h5` is present in the repo root or update `app_modified.py` to point at the correct path.
+- False positives on documents/screens: inspect server logs — `app_modified.py` logs ImageNet decoded labels when the ImageNet fallback is used. Tune thresholds or add keywords to the `non_natural_keywords`/`bovine_keywords` lists in `app_modified.py`.
 
-Troubleshooting
----------------
-- Q: The server fails to load MobileNetV2 weights (download error).
-  - A: Make sure the host has internet access and sufficient disk space. To skip the ImageNet fallback, set `DISABLE_IMAGENET_CHECK=1` and rely on disease-model confidence.
+**Security & Privacy**
 
-- Q: The app predicts a disease for a non-cow image.
-  - A: This project includes heuristics to reduce that, but the most robust fix is to train a dedicated cow/not-cow detector. As a quick fix you can increase `non_natural_prob_threshold` in `app_modified.py` or enable the conservative top-label veto.
+- NOTE: the project previously used an `uploads/` folder for temporary storage. That folder has been removed from the repository; by default the current server processes uploaded images in-memory and does not persist them to disk. If you want to persist uploads again (for debugging or audit logs), create an `uploads/` folder at the repo root and update `app_modified.py` to save incoming files, and be sure to add the folder to `.gitignore` to avoid committing user images.
 
-- Q: The page is blank or fonts/styles not applied.
-  - A: Check browser console for errors and ensure `/static/css/style.css` is loading (server logs will show 200/304 for static assets).
+If running in production, add explicit policies for data retention, secure storage, and user consent.
 
-Contact and support
--------------------
-If you want, I can:
+**Contributing**
 
-- Add a textual explanation of which check allowed the upload in the `/predict` JSON response (e.g., `accepted_by: "imagenet_ox"` or `rejection_reason: "non_natural_envelope"`).
-- Add a client-side "Proceed anyway" override.
-- Scaffold a transfer-learning training script for a robust cow/not-cow classifier.
+- If you want to contribute improvements:
+  - Open issues for bugs or feature requests (e.g., a dedicated cow/not-cow classifier, CI/CD, frontend UX fixes).
+  - Fork the repo, create feature branches, and open pull requests. Describe changes and include reproducible steps.
 
-License & Contributing
-----------------------
-Add a `LICENSE` file when you choose a license (MIT, Apache-2.0, etc.). If you want I can add an `MIT` license file and a short `CONTRIBUTING.md` with basic guidelines.
+**License & Acknowledgements**
 
-----
+- This repository currently contains no explicit license file. If you plan to share publicly, add a `LICENSE` file (MIT or Apache 2.0 are common choices).
+- Acknowledge any third-party datasets you used for training if they require attribution.
 
-If you'd like, I can now:
+**Contact / Maintainer**
 
-- Add the acceptance/rejection reason to `/predict` JSON responses and update the UI to show it.
-- Add a `Proceed anyway` UI toggle to override a rejection.
-- Scaffold a small transfer-learning training script for a cow/not-cow classifier.
+- Repository owner: GitHub `SahilSinha007` (see project remote URL).
 
-Tell me which of those you'd like next and I will implement it.
-# AI-Powered Cattle Disease Detection System
+**Next steps I can help with**
 
-An advanced machine learning application that detects cattle diseases from images using deep learning and computer vision techniques.
+- Remove `dataset/` from the repo and add Git LFS integration.
+- Add a small binary cow/not-cow classifier to reduce heuristic complexity.
+- Add a structured `rejection_reason` field to `/predict` JSON and a front-end "Proceed anyway" override that allows users to bypass the heuristic (useful for research/testing).
 
-## 🎯 Features
-
-- **AI-Powered Detection**: Uses EfficientNetB0 pre-trained model with transfer learning
-- **Disease Classification**: Detects 4 conditions - Healthy, Lumpy Skin Disease, Foot and Mouth Disease, Mastitis  
-- **Dataset Imbalance Handling**: Implements data augmentation and class weights for optimal performance
-- **Modern Web Interface**: Drag-and-drop image upload with real-time predictions
-- **Detailed Analysis**: Provides confidence scores, disease descriptions, and recommendations
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-
-## 📁 Project Structure
-
-```
-Cattle_Disease_Project/
-├── app.py                      # Flask web application
-├── train_model.py             # Model training script
-├── requirements.txt           # Python dependencies
-├── README.md                  # This file
-├── dataset/                   # Training dataset (add your images here)
-│   ├── healthy/              # Healthy cattle images
-│   ├── lumpy_skin/           # Lumpy skin disease images
-│   ├── foot_mouth/           # Foot and mouth disease images
-│   └── mastitis/             # Mastitis images
-├── templates/
-│   └── index.html            # Web interface template
-├── static/
-│   └── css/
-│       └── style.css         # Styling for web interface
-└── uploads/                  # Temporary file storage (created automatically)
-```
-
-## 🚀 Installation & Setup
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Prepare Dataset
-- Add your cattle images to the respective folders in `dataset/`
-- Organize images by disease category:
-  - `dataset/healthy/` - Healthy cattle images
-  - `dataset/lumpy_skin/` - Lumpy skin disease images  
-  - `dataset/foot_mouth/` - Foot and mouth disease images
-  - `dataset/mastitis/` - Mastitis images
-
-### 3. Train the Model
-```bash
-python train_model.py
-```
-This will:
-- Load and preprocess your dataset
-- Apply data augmentation to handle class imbalance
-- Train the EfficientNetB0 model with transfer learning
-- Generate training plots and confusion matrix
-- Save the trained model as `cattle_disease_model.h5`
-- Create `class_indices.json` for class mapping
-
-### 4. Run the Web Application
-```bash
-python app.py
-```
-
-### 5. Access the Application
-Open your browser and go to: `http://127.0.0.1:5000`
-
-## 🎯 Key Technical Features
-
-### Dataset Imbalance Handling
-- **Data Augmentation**: Rotation, zoom, flip, shift transformations
-- **Class Weights**: Penalizes model for misclassifying minority classes
-- **Target Accuracy**: >80% across all disease categories
-
-### Model Architecture
-- **Base Model**: EfficientNetB0 pre-trained on ImageNet
-- **Transfer Learning**: Frozen base layers with custom classification head
-- **Input Size**: 224x224 pixels
-- **Output**: 4-class softmax classification
-
-### Web Interface
-- **Drag & Drop**: Easy image upload functionality
-- **Real-time Preview**: Image preview before analysis
-- **Detailed Results**: Confidence scores for all classes
-- **Disease Information**: Descriptions, severity levels, recommendations
-- **Error Handling**: Comprehensive error management
-- **Responsive Design**: Mobile-friendly interface
-
-## 📊 Expected Performance
-
-The system is designed to achieve >80% accuracy through:
-- Advanced data augmentation techniques
-- Class weight balancing for imbalanced datasets
-- Transfer learning from EfficientNetB0
-- Proper train/validation splitting (80/20)
-
-## 🔧 Troubleshooting
-
-### Common Issues:
-
-1. **Model Loading Error**: Ensure `train_model.py` has been run successfully
-2. **Dataset Error**: Check that images are properly organized in dataset folders
-3. **Memory Issues**: Reduce batch size in `train_model.py` if needed
-4. **Port Issues**: Change port in `app.py` if 5000 is occupied
-
-### System Requirements:
-- Python 3.7+
-- TensorFlow 2.13.0
-- 8GB+ RAM recommended for training
-- GPU optional but recommended for faster training
-
-## 📝 Usage Instructions
-
-1. **Training Phase**: Run `train_model.py` with your dataset
-2. **Deployment Phase**: Run `app.py` to start the web server
-3. **Prediction Phase**: Upload cattle images through the web interface
-4. **Analysis**: Review detailed predictions and recommendations
-
-## 🚨 Important Notes
-
-- Always train the model before running the web application
-- Ensure proper dataset organization for optimal results
-- The system requires internet connection for initial model download
-- Generated model files (`cattle_disease_model.h5`, `class_indices.json`) are essential for the web app
-
-## 📄 License
-
-This project is designed for educational and research purposes in veterinary AI applications.
-
----
-
-**Developed with ❤️ for cattle health monitoring using AI**
+If you'd like, I can now make any of the above changes (cleanup dataset, add LFS, implement UI override, or include a cow/not-cow classifier scaffold). Tell me which you'd like next.
