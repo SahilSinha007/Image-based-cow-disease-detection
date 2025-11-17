@@ -102,7 +102,7 @@ The system uses **transfer learning** on a pre-trained ImageNet backbone for eff
 
 | Component | Details |
 |-----------|---------|
-| **Base Model** | MobileNetV2 or EfficientNetB0 (ImageNet pretrained) |
+| **Base Model** | MobileNetV2 and VGG16 (ImageNet pretrained) |
 | **Input Size** | 224 × 224 × 3 (RGB images) |
 | **Preprocessing** | Backend-specific (e.g., `mobilenet_v2.preprocess_input`: [-1, 1] range) |
 | **Pooling** | Global Average Pooling |
@@ -510,22 +510,9 @@ python train_simple_robust.py --seed 42 --data_dir dataset
 
 ---
 
-## 📄 License & Contributing
-
-### License
-Add a `LICENSE` file when you decide on a license. **MIT** is recommended for permissive reuse:
-```
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-```
-
-### Contributing Guidelines
-- **Report Bugs**: Open GitHub issues with reproducible steps
-- **Propose Features**: Discuss enhancements before implementing
-- **Submit PRs**: Keep datasets out of version control; use external hosting
-- **Documentation**: Update README for any new features
 
 ### Authors & Acknowledgments
-- Primary Repository: https://github.com/SahilSinha007/Image-based-cow-disease-detection
+- Sahil Sinha
 - Built with: TensorFlow, Flask, Bootstrap
 
 ---
@@ -535,20 +522,26 @@ Permission is hereby granted, free of charge, to any person obtaining a copy...
 Add sample screenshots to demonstrate the web UI:
 
 **Upload Interface:**
-![Upload](screenshots/screenshot-upload.png)
+<img width="1853" height="988" alt="Screenshot 2025-11-17 133353" src="https://github.com/user-attachments/assets/139c6d9b-1618-4f0e-869f-dc7fdfc3dff5" />
+<img width="1826" height="983" alt="image" src="https://github.com/user-attachments/assets/222a8baf-6773-4bb6-8208-c22d8da44793" />
+<img width="1823" height="965" alt="image" src="https://github.com/user-attachments/assets/d387b8c3-9aea-414a-8654-9616d8fc7571" />
+
+
 
 **Prediction Results:**
-![Results](screenshots/screenshot-result.png)
+<img width="1817" height="981" alt="Screenshot 2025-11-17 133443" src="https://github.com/user-attachments/assets/a80c8a1a-89d3-4316-9b6f-028fb841242b" />
+<img width="1833" height="990" alt="image" src="https://github.com/user-attachments/assets/d8442f6a-6b97-4cf6-a9b4-fc215f5ce2ea" />
+<img width="1824" height="983" alt="image" src="https://github.com/user-attachments/assets/e0138c5f-ead5-4253-a48b-412bfb62797d" />
 
-*To add screenshots: create a `screenshots/` folder, add images, and update the paths above.*
+
+
 
 ---
 
 ## 📞 Support & Contact
 
 For questions, issues, or feedback:
-- **GitHub Issues**: Open an issue on the repository
-- **Email**: Contact the repository maintainer
+- **Email**: ss2003hks@gmail.com
 - **Discussion**: Use GitHub Discussions for feature ideas
 
 ---
